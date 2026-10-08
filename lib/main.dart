@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -68,45 +73,67 @@ class _BiodataPageState extends State<BiodataPage> {
 
   // SUBMIT
 
-  void submitBiodata() {
-    setState(() {
-      submittedData = {
-        'Name': nameController.text,
-        'Marital Status': maritalStatusController.text,
-        'Full Name': fullNameController.text,
-        'Religion': religionController.text,
-        'Date of Birth': dateOfBirthController.text,
-        'Height': heightController.text,
-        'Weight': weightController.text,
-        'Blood Group': bloodGroupController.text,
-        'Nationality': nationalityController.text,
-        'Gender': genderController.text,
+  Future<void> submitBiodata() async {
+    // Create the data that will be displayed
+    final data = {
+      'Name': nameController.text.trim(),
+      'Marital Status': maritalStatusController.text.trim(),
+      'Full Name': fullNameController.text.trim(),
+      'Religion': religionController.text.trim(),
+      'Date of Birth': dateOfBirthController.text.trim(),
+      'Height': heightController.text.trim(),
+      'Weight': weightController.text.trim(),
+      'Blood Group': bloodGroupController.text.trim(),
+      'Nationality': nationalityController.text.trim(),
+      'Gender': genderController.text.trim(),
 
-        'Education Level': educationLevelController.text,
-        'School Name': schoolNameController.text,
-        'Year': educationYearController.text,
-        'Course': courseController.text,
+      'Education Level': educationLevelController.text.trim(),
+      'School Name': schoolNameController.text.trim(),
+      'Year': educationYearController.text.trim(),
+      'Course': courseController.text.trim(),
 
-        'Occupation': occupationController.text,
-        'Skills': skillsController.text,
+      'Occupation': occupationController.text.trim(),
+      'Skills': skillsController.text.trim(),
 
-        "Father's Name": fatherNameController.text,
-        "Mother's Name": motherNameController.text,
-        'Siblings': siblingsController.text,
+      "Father's Name": fatherNameController.text.trim(),
+      "Mother's Name": motherNameController.text.trim(),
+      'Siblings': siblingsController.text.trim(),
 
-        'Address': addressController.text,
-        'Contact No.': contactController.text,
-        'Email': emailController.text,
+      'Address': addressController.text.trim(),
+      'Contact No.': contactController.text.trim(),
+      'Email': emailController.text.trim(),
 
-        'Certificates': certificatesController.text,
-      };
-    });
+      'Certificates': certificatesController.text.trim(),
+    };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Biodata submitted successfully!'),
-      ),
-    );
+    try {
+      await FirebaseFirestore.instance.collection('biodata').add({
+        ...data,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        submittedData = Map<String, String>.from(data);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Biodata saved to Firebase successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save biodata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   // CLEAR
@@ -217,10 +244,7 @@ class _BiodataPageState extends State<BiodataPage> {
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: kHeaderColor,
                 borderRadius: BorderRadius.circular(3),
@@ -257,17 +281,11 @@ class _BiodataPageState extends State<BiodataPage> {
                 width: 150,
                 child: Text(
                   entry.key,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               const Text(': '),
-              Expanded(
-                child: Text(
-                  entry.value.isEmpty ? 'N/A' : entry.value,
-                ),
-              ),
+              Expanded(child: Text(entry.value.isEmpty ? 'N/A' : entry.value)),
             ],
           ),
         );
@@ -298,103 +316,46 @@ class _BiodataPageState extends State<BiodataPage> {
 
         const SizedBox(height: 20),
 
-        displaySection(
-          'PERSONAL DETAILS',
-          [
-            MapEntry('Name', data['Name'] ?? ''),
-            MapEntry('Marital Status', data['Marital Status'] ?? ''),
-            MapEntry('Full Name', data['Full Name'] ?? ''),
-            MapEntry('Religion', data['Religion'] ?? ''),
-            MapEntry('Date of Birth', data['Date of Birth'] ?? ''),
-            MapEntry('Height', data['Height'] ?? ''),
-            MapEntry('Weight', data['Weight'] ?? ''),
-            MapEntry('Blood Group', data['Blood Group'] ?? ''),
-            MapEntry('Nationality', data['Nationality'] ?? ''),
-            MapEntry('Gender', data['Gender'] ?? ''),
-          ],
-        ),
+        displaySection('PERSONAL DETAILS', [
+          MapEntry('Name', data['Name'] ?? ''),
+          MapEntry('Marital Status', data['Marital Status'] ?? ''),
+          MapEntry('Full Name', data['Full Name'] ?? ''),
+          MapEntry('Religion', data['Religion'] ?? ''),
+          MapEntry('Date of Birth', data['Date of Birth'] ?? ''),
+          MapEntry('Height', data['Height'] ?? ''),
+          MapEntry('Weight', data['Weight'] ?? ''),
+          MapEntry('Blood Group', data['Blood Group'] ?? ''),
+          MapEntry('Nationality', data['Nationality'] ?? ''),
+          MapEntry('Gender', data['Gender'] ?? ''),
+        ]),
 
-        displaySection(
-          'EDUCATION DETAILS',
-          [
-            MapEntry(
-              'Education Level',
-              data['Education Level'] ?? '',
-            ),
-            MapEntry(
-              'School Name',
-              data['School Name'] ?? '',
-            ),
-            MapEntry(
-              'Year',
-              data['Year'] ?? '',
-            ),
-            MapEntry(
-              'Course',
-              data['Course'] ?? '',
-            ),
-          ],
-        ),
+        displaySection('EDUCATION DETAILS', [
+          MapEntry('Education Level', data['Education Level'] ?? ''),
+          MapEntry('School Name', data['School Name'] ?? ''),
+          MapEntry('Year', data['Year'] ?? ''),
+          MapEntry('Course', data['Course'] ?? ''),
+        ]),
 
-        displaySection(
-          'OCCUPATION / JOB',
-          [
-            MapEntry(
-              'Occupation',
-              data['Occupation'] ?? '',
-            ),
-            MapEntry(
-              'Skills',
-              data['Skills'] ?? '',
-            ),
-          ],
-        ),
+        displaySection('OCCUPATION / JOB', [
+          MapEntry('Occupation', data['Occupation'] ?? ''),
+          MapEntry('Skills', data['Skills'] ?? ''),
+        ]),
 
-        displaySection(
-          'FAMILY BACKGROUND',
-          [
-            MapEntry(
-              "Father's Name",
-              data["Father's Name"] ?? '',
-            ),
-            MapEntry(
-              "Mother's Name",
-              data["Mother's Name"] ?? '',
-            ),
-            MapEntry(
-              'Siblings',
-              data['Siblings'] ?? '',
-            ),
-          ],
-        ),
+        displaySection('FAMILY BACKGROUND', [
+          MapEntry("Father's Name", data["Father's Name"] ?? ''),
+          MapEntry("Mother's Name", data["Mother's Name"] ?? ''),
+          MapEntry('Siblings', data['Siblings'] ?? ''),
+        ]),
 
-        displaySection(
-          'RESIDENTIAL ADDRESS',
-          [
-            MapEntry(
-              'Address',
-              data['Address'] ?? '',
-            ),
-            MapEntry(
-              'Contact No.',
-              data['Contact No.'] ?? '',
-            ),
-            MapEntry(
-              'Email',
-              data['Email'] ?? '',
-            ),
-          ],
-        ),
+        displaySection('RESIDENTIAL ADDRESS', [
+          MapEntry('Address', data['Address'] ?? ''),
+          MapEntry('Contact No.', data['Contact No.'] ?? ''),
+          MapEntry('Email', data['Email'] ?? ''),
+        ]),
 
-        displaySection(
-          'CERTIFICATES',
-          [
-            MapEntry(
-              'Certificates',
-              data['Certificates'] ?? '',
-            ),
-          ],
-        ),
+        displaySection('CERTIFICATES', [
+          MapEntry('Certificates', data['Certificates'] ?? ''),
+        ]),
 
         const SizedBox(height: 10),
 
@@ -426,169 +387,79 @@ class _BiodataPageState extends State<BiodataPage> {
           padding: const EdgeInsets.all(20),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 900,
-              ),
+              constraints: const BoxConstraints(maxWidth: 900),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'BIO DATA INPUT',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
 
                   const SizedBox(height: 8),
 
                   const Text(
                     'Enter your information below.',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
 
                   const SizedBox(height: 24),
 
                   // PERSONAL
-                  section(
-                    'PERSONAL DETAILS',
-                    [
-                      inputField(
-                        'Name',
-                        nameController,
-                      ),
-                      inputField(
-                        'Marital Status',
-                        maritalStatusController,
-                      ),
-                      inputField(
-                        'Full Name',
-                        fullNameController,
-                      ),
-                      inputField(
-                        'Religion',
-                        religionController,
-                      ),
-                      inputField(
-                        'Date of Birth',
-                        dateOfBirthController,
-                      ),
-                      inputField(
-                        'Height',
-                        heightController,
-                      ),
-                      inputField(
-                        'Weight',
-                        weightController,
-                      ),
-                      inputField(
-                        'Blood Group',
-                        bloodGroupController,
-                      ),
-                      inputField(
-                        'Nationality',
-                        nationalityController,
-                      ),
-                      inputField(
-                        'Gender',
-                        genderController,
-                      ),
-                    ],
-                  ),
+                  section('PERSONAL DETAILS', [
+                    inputField('Name', nameController),
+                    inputField('Marital Status', maritalStatusController),
+                    inputField('Full Name', fullNameController),
+                    inputField('Religion', religionController),
+                    inputField('Date of Birth', dateOfBirthController),
+                    inputField('Height', heightController),
+                    inputField('Weight', weightController),
+                    inputField('Blood Group', bloodGroupController),
+                    inputField('Nationality', nationalityController),
+                    inputField('Gender', genderController),
+                  ]),
 
                   // EDUCATION
-                  section(
-                    'EDUCATION DETAILS',
-                    [
-                      inputField(
-                        'Education Level',
-                        educationLevelController,
-                      ),
-                      inputField(
-                        'School Name',
-                        schoolNameController,
-                      ),
-                      inputField(
-                        'Year',
-                        educationYearController,
-                      ),
-                      inputField(
-                        'Course / Education Details',
-                        courseController,
-                      ),
-                    ],
-                  ),
+                  section('EDUCATION DETAILS', [
+                    inputField('Education Level', educationLevelController),
+                    inputField('School Name', schoolNameController),
+                    inputField('Year', educationYearController),
+                    inputField('Course / Education Details', courseController),
+                  ]),
 
                   // OCCUPATION
-                  section(
-                    'OCCUPATION / JOB',
-                    [
-                      inputField(
-                        'Occupation / Status',
-                        occupationController,
-                      ),
-                      inputField(
-                        'Skills',
-                        skillsController,
-                        maxLines: 3,
-                      ),
-                    ],
-                  ),
+                  section('OCCUPATION / JOB', [
+                    inputField('Occupation / Status', occupationController),
+                    inputField('Skills', skillsController, maxLines: 3),
+                  ]),
 
                   // FAMILY
-                  section(
-                    'FAMILY BACKGROUND',
-                    [
-                      inputField(
-                        "Father's Name",
-                        fatherNameController,
-                      ),
-                      inputField(
-                        "Mother's Name",
-                        motherNameController,
-                      ),
-                      inputField(
-                        'Brothers / Sisters',
-                        siblingsController,
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
+                  section('FAMILY BACKGROUND', [
+                    inputField("Father's Name", fatherNameController),
+                    inputField("Mother's Name", motherNameController),
+                    inputField(
+                      'Brothers / Sisters',
+                      siblingsController,
+                      maxLines: 2,
+                    ),
+                  ]),
 
                   // ADDRESS
-                  section(
-                    'RESIDENTIAL ADDRESS',
-                    [
-                      inputField(
-                        'Address',
-                        addressController,
-                        maxLines: 2,
-                      ),
-                      inputField(
-                        'Contact No.',
-                        contactController,
-                      ),
-                      inputField(
-                        'E-mail',
-                        emailController,
-                      ),
-                    ],
-                  ),
+                  section('RESIDENTIAL ADDRESS', [
+                    inputField('Address', addressController, maxLines: 2),
+                    inputField('Contact No.', contactController),
+                    inputField('E-mail', emailController),
+                  ]),
 
                   // CERTIFICATES
-                  section(
-                    'CERTIFICATES',
-                    [
-                      inputField(
-                        'Certificates',
-                        certificatesController,
-                        hint: 'Enter certificates separated by commas',
-                        maxLines: 4,
-                      ),
-                    ],
-                  ),
+                  section('CERTIFICATES', [
+                    inputField(
+                      'Certificates',
+                      certificatesController,
+                      hint: 'Enter certificates separated by commas',
+                      maxLines: 4,
+                    ),
+                  ]),
 
                   // SUBMIT
                   SizedBox(
